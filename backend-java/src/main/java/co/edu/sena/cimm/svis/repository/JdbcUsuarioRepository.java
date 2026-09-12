@@ -7,7 +7,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -15,25 +14,29 @@ import java.util.Optional;
 public class JdbcUsuarioRepository implements UsuarioRepository {
 
     @Override
-    public Optional<Usuario> buscarPorDocumento(String documento) {
-        String sql = "SELECT id, documento, nombre_completo, email, password, rol, fecha_registro FROM usuario WHERE documento = ?";
+    public Optional<Usuario> buscarPorDocumento(String identificador) {
+        if (identificador == null || identificador.trim().isEmpty()) {
+            return Optional.empty();
+        }
+        String sql = "SELECT id, nombre, correo, password, rol, activo FROM usuarios WHERE correo = ? OR nombre = ?";
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setString(1, documento);
+            ps.setString(1, identificador.trim());
+            ps.setString(2, identificador.trim());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return Optional.of(map(rs));
                 }
             }
         } catch (SQLException ex) {
-            throw new RuntimeException("Error consultando usuario por documento", ex);
+            throw new RuntimeException("Error consultando usuario por correo/identificador", ex);
         }
         return Optional.empty();
     }
 
     @Override
     public Optional<Usuario> buscarPorId(Long id) {
-        String sql = "SELECT id, documento, nombre_completo, email, password, rol, fecha_registro FROM usuario WHERE id = ?";
+        String sql = "SELECT id, nombre, correo, password, rol, activo FROM usuarios WHERE id = ?";
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setLong(1, id);
@@ -50,7 +53,7 @@ public class JdbcUsuarioRepository implements UsuarioRepository {
 
     @Override
     public List<Usuario> listarVotantes() {
-        String sql = "SELECT id, documento, nombre_completo, email, password, rol, fecha_registro FROM usuario WHERE rol = 'VOTANTE' ORDER BY nombre_completo ASC";
+        String sql = "SELECT id, nombre, correo, password, rol, activo FROM usuarios WHERE rol = 'VOTANTE' AND activo = TRUE ORDER BY nombre ASC";
         List<Usuario> lista = new ArrayList<>();
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(sql);
@@ -66,7 +69,7 @@ public class JdbcUsuarioRepository implements UsuarioRepository {
 
     @Override
     public int contarVotantes() {
-        String sql = "SELECT COUNT(*) FROM usuario WHERE rol = 'VOTANTE'";
+        String sql = "SELECT COUNT(*) FROM usuarios WHERE rol = 'VOTANTE' AND activo = TRUE";
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -82,12 +85,11 @@ public class JdbcUsuarioRepository implements UsuarioRepository {
     private Usuario map(ResultSet rs) throws SQLException {
         return new Usuario(
                 rs.getLong("id"),
-                rs.getString("documento"),
-                rs.getString("nombre_completo"),
-                rs.getString("email"),
+                rs.getString("nombre"),
+                rs.getString("correo"),
                 rs.getString("password"),
                 Rol.valueOf(rs.getString("rol")),
-                rs.getObject("fecha_registro", LocalDateTime.class)
+                rs.getBoolean("activo")
         );
     }
 }

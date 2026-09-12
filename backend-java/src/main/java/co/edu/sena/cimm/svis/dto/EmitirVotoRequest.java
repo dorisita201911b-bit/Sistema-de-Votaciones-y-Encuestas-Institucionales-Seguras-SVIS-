@@ -2,7 +2,9 @@ package co.edu.sena.cimm.svis.dto;
 
 public class EmitirVotoRequest {
     private String token;
+    private String otp;
     private Long opcionId;
+    private Long encuestaId;
 
     public EmitirVotoRequest() {
     }
@@ -13,11 +15,25 @@ public class EmitirVotoRequest {
     }
 
     public String getToken() {
-        return token;
+        if (token != null && !token.trim().isEmpty()) {
+            return token.trim();
+        }
+        if (otp != null && !otp.trim().isEmpty()) {
+            return otp.trim();
+        }
+        return "";
     }
 
     public void setToken(String token) {
         this.token = token;
+    }
+
+    public String getOtp() {
+        return getToken();
+    }
+
+    public void setOtp(String otp) {
+        this.otp = otp;
     }
 
     public Long getOpcionId() {
@@ -26,5 +42,13 @@ public class EmitirVotoRequest {
 
     public void setOpcionId(Long opcionId) {
         this.opcionId = opcionId;
+    }
+
+    public Long getEncuestaId() {
+        return encuestaId;
+    }
+
+    public void setEncuestaId(Long encuestaId) {
+        this.encuestaId = encuestaId;
     }
 }

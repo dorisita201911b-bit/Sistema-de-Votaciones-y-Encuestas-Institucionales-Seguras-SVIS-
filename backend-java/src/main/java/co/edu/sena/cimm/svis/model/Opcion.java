@@ -2,27 +2,33 @@ package co.edu.sena.cimm.svis.model;
 
 /**
  * Representa una opción o candidatura dentro de una encuesta.
+ * Mapea la tabla 'opciones' (id, encuesta_id, nombre, cantidad_votos).
  * 
  * Cumplimiento estricto de REGLA 4 (Secreto Absoluto del Sufragio):
  * No se almacena ninguna relación con el usuario ni con el token OTP.
- * Únicamente se incrementa el contador de votos (+1).
+ * Únicamente se incrementa el contador numérico de votos (+1).
  */
 public class Opcion {
     private Long id;
     private Long encuestaId;
-    private String titulo;
-    private String descripcion;
-    private int votosConteo;
+    private String nombre;
+    private int cantidadVotos;
 
     public Opcion() {
     }
 
-    public Opcion(Long id, Long encuestaId, String titulo, String descripcion, int votosConteo) {
+    public Opcion(Long id, Long encuestaId, String nombre, int cantidadVotos) {
         this.id = id;
         this.encuestaId = encuestaId;
-        this.titulo = titulo;
-        this.descripcion = descripcion;
-        this.votosConteo = votosConteo;
+        this.nombre = nombre;
+        this.cantidadVotos = cantidadVotos;
+    }
+
+    public Opcion(Long id, Long encuestaId, String nombre, String descripcion, int cantidadVotos) {
+        this.id = id;
+        this.encuestaId = encuestaId;
+        this.nombre = nombre;
+        this.cantidadVotos = cantidadVotos;
     }
 
     public Long getId() {
@@ -41,27 +47,43 @@ public class Opcion {
         this.encuestaId = encuestaId;
     }
 
+    public String getNombre() {
+        return nombre;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
     public String getTitulo() {
-        return titulo;
+        return nombre;
     }
 
     public void setTitulo(String titulo) {
-        this.titulo = titulo;
+        this.nombre = titulo;
     }
 
     public String getDescripcion() {
-        return descripcion;
+        return "";
     }
 
     public void setDescripcion(String descripcion) {
-        this.descripcion = descripcion;
+        // Compatibilidad
+    }
+
+    public int getCantidadVotos() {
+        return cantidadVotos;
+    }
+
+    public void setCantidadVotos(int cantidadVotos) {
+        this.cantidadVotos = cantidadVotos;
     }
 
     public int getVotosConteo() {
-        return votosConteo;
+        return cantidadVotos;
     }
 
     public void setVotosConteo(int votosConteo) {
-        this.votosConteo = votosConteo;
+        this.cantidadVotos = votosConteo;
     }
 }

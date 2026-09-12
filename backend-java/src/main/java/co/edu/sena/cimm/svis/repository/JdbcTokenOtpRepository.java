@@ -20,9 +20,9 @@ public class JdbcTokenOtpRepository implements TokenOtpRepository {
 
     @Override
     public int generarPadron(Long encuestaId, List<Usuario> votantes, int ttlMinutos) {
-        String sqlVerificar = "SELECT COUNT(*) FROM token_otp WHERE encuesta_id = ? AND usuario_id = ?";
-        String sqlInsert = "INSERT INTO token_otp (encuesta_id, usuario_id, token, estado, fecha_generacion, fecha_expiracion) "
-                + "VALUES (?, ?, ?, 'DISPONIBLE', ?, ?)";
+        String sqlVerificar = "SELECT COUNT(*) FROM tokens WHERE encuesta_id = ? AND usuario_id = ?";
+        String sqlInsert = "INSERT INTO tokens (encuesta_id, usuario_id, token, estado, fecha_expiracion) "
+                + "VALUES (?, ?, ?, 'DISPONIBLE', ?)";
 
         int creados = 0;
         try (Connection c = Database.getConnection()) {
@@ -47,8 +47,7 @@ public class JdbcTokenOtpRepository implements TokenOtpRepository {
                     psInsert.setLong(1, encuestaId);
                     psInsert.setLong(2, u.getId());
                     psInsert.setString(3, tokenValor);
-                    psInsert.setTimestamp(4, Timestamp.valueOf(ahora));
-                    psInsert.setTimestamp(5, Timestamp.valueOf(expiracion));
+                    psInsert.setTimestamp(4, Timestamp.valueOf(expiracion));
                     psInsert.executeUpdate();
                     creados++;
                 }
@@ -68,8 +67,8 @@ public class JdbcTokenOtpRepository implements TokenOtpRepository {
 
     @Override
     public Optional<TokenOtp> buscarPorValor(String tokenStr) {
-        String sql = "SELECT id, encuesta_id, usuario_id, token, estado, fecha_generacion, fecha_expiracion, fecha_uso "
-                + "FROM token_otp WHERE token = ?";
+        String sql = "SELECT id, encuesta_id, usuario_id, token, estado, fecha_expiracion, fecha_uso "
+                + "FROM tokens WHERE token = ?";
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, tokenStr != null ? tokenStr.trim() : "");
@@ -86,8 +85,8 @@ public class JdbcTokenOtpRepository implements TokenOtpRepository {
 
     @Override
     public Optional<TokenOtp> buscarPorEncuestaYUsuario(Long encuestaId, Long usuarioId) {
-        String sql = "SELECT id, encuesta_id, usuario_id, token, estado, fecha_generacion, fecha_expiracion, fecha_uso "
-                + "FROM token_otp WHERE encuesta_id = ? AND usuario_id = ?";
+        String sql = "SELECT id, encuesta_id, usuario_id, token, estado, fecha_expiracion, fecha_uso "
+                + "FROM tokens WHERE encuesta_id = ? AND usuario_id = ?";
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setLong(1, encuestaId);
@@ -105,12 +104,12 @@ public class JdbcTokenOtpRepository implements TokenOtpRepository {
 
     @Override
     public List<TokenView> listarPorEncuesta(Long encuestaId) {
-        String sql = "SELECT t.id, t.encuesta_id, t.usuario_id, u.documento, u.nombre_completo, "
-                + "t.token, t.estado, t.fecha_generacion, t.fecha_expiracion, t.fecha_uso "
-                + "FROM token_otp t "
-                + "JOIN usuario u ON u.id = t.usuario_id "
+        String sql = "SELECT t.id, t.encuesta_id, t.usuario_id, u.correo, u.nombre, "
+                + "t.token, t.estado, t.fecha_expiracion, t.fecha_uso "
+                + "FROM tokens t "
+                + "JOIN usuarios u ON u.id = t.usuario_id "
                 + "WHERE t.encuesta_id = ? "
-                + "ORDER BY u.nombre_completo ASC";
+                + "ORDER BY u.nombre ASC";
 
         List<TokenView> lista = new ArrayList<>();
         try (Connection c = Database.getConnection();
@@ -118,17 +117,19 @@ public class JdbcTokenOtpRepository implements TokenOtpRepository {
             ps.setLong(1, encuestaId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
+                    Timestamp fExp = rs.getTimestamp("fecha_expiracion");
+                    Timestamp fUso = rs.getTimestamp("fecha_uso");
                     lista.add(new TokenView(
                             rs.getLong("id"),
                             rs.getLong("encuesta_id"),
                             rs.getLong("usuario_id"),
-                            rs.getString("documento"),
-                            rs.getString("nombre_completo"),
+                            rs.getString("correo"),
+                            rs.getString("nombre"),
                             rs.getString("token"),
                             EstadoToken.valueOf(rs.getString("estado")),
-                            rs.getObject("fecha_generacion", LocalDateTime.class),
-                            rs.getObject("fecha_expiracion", LocalDateTime.class),
-                            rs.getObject("fecha_uso", LocalDateTime.class)
+                            null,
+                            fExp != null ? fExp.toLocalDateTime() : null,
+                            fUso != null ? fUso.toLocalDateTime() : null
                     ));
                 }
             }
@@ -140,7 +141,7 @@ public class JdbcTokenOtpRepository implements TokenOtpRepository {
 
     @Override
     public int contarPorEncuesta(Long encuestaId) {
-        String sql = "SELECT COUNT(*) FROM token_otp WHERE encuesta_id = ?";
+        String sql = "SELECT COUNT(*) FROM tokens WHERE encuesta_id = ?";
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setLong(1, encuestaId);
@@ -157,7 +158,7 @@ public class JdbcTokenOtpRepository implements TokenOtpRepository {
 
     @Override
     public int contarUsadosPorEncuesta(Long encuestaId) {
-        String sql = "SELECT COUNT(*) FROM token_otp WHERE encuesta_id = ? AND estado = 'USADO'";
+        String sql = "SELECT COUNT(*) FROM tokens WHERE encuesta_id = ? AND estado = 'USADO'";
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setLong(1, encuestaId);
@@ -173,15 +174,17 @@ public class JdbcTokenOtpRepository implements TokenOtpRepository {
     }
 
     private TokenOtp map(ResultSet rs) throws SQLException {
+        Timestamp fExp = rs.getTimestamp("fecha_expiracion");
+        Timestamp fUso = rs.getTimestamp("fecha_uso");
         return new TokenOtp(
                 rs.getLong("id"),
                 rs.getLong("encuesta_id"),
                 rs.getLong("usuario_id"),
                 rs.getString("token"),
                 EstadoToken.valueOf(rs.getString("estado")),
-                rs.getObject("fecha_generacion", LocalDateTime.class),
-                rs.getObject("fecha_expiracion", LocalDateTime.class),
-                rs.getObject("fecha_uso", LocalDateTime.class)
+                null,
+                fExp != null ? fExp.toLocalDateTime() : null,
+                fUso != null ? fUso.toLocalDateTime() : null
         );
     }
 }

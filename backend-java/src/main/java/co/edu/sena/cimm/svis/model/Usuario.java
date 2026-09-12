@@ -1,27 +1,24 @@
 package co.edu.sena.cimm.svis.model;
 
-import java.time.LocalDateTime;
-
 public class Usuario {
     private Long id;
-    private String documento;
-    private String nombreCompleto;
-    private String email;
+    private String nombre;
+    private String correo;
     private String password;
     private Rol rol;
-    private LocalDateTime fechaRegistro;
+    private boolean activo;
 
     public Usuario() {
+        this.activo = true;
     }
 
-    public Usuario(Long id, String documento, String nombreCompleto, String email, String password, Rol rol, LocalDateTime fechaRegistro) {
+    public Usuario(Long id, String nombre, String correo, String password, Rol rol, boolean activo) {
         this.id = id;
-        this.documento = documento;
-        this.nombreCompleto = nombreCompleto;
-        this.email = email;
+        this.nombre = nombre;
+        this.correo = correo;
         this.password = password;
         this.rol = rol;
-        this.fechaRegistro = fechaRegistro;
+        this.activo = activo;
     }
 
     public Long getId() {
@@ -32,28 +29,44 @@ public class Usuario {
         this.id = id;
     }
 
-    public String getDocumento() {
-        return documento;
+    public String getNombre() {
+        return nombre;
     }
 
-    public void setDocumento(String documento) {
-        this.documento = documento;
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
     }
 
     public String getNombreCompleto() {
-        return nombreCompleto;
+        return nombre;
     }
 
-    public void setNombreCompleto(String nombreCompleto) {
-        this.nombreCompleto = nombreCompleto;
+    public void setNombreCompleto(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public String getCorreo() {
+        return correo;
+    }
+
+    public void setCorreo(String correo) {
+        this.correo = correo;
     }
 
     public String getEmail() {
-        return email;
+        return correo;
     }
 
     public void setEmail(String email) {
-        this.email = email;
+        this.correo = email;
+    }
+
+    public String getDocumento() {
+        return correo;
+    }
+
+    public void setDocumento(String doc) {
+        this.correo = doc;
     }
 
     public String getPassword() {
@@ -72,11 +85,11 @@ public class Usuario {
         this.rol = rol;
     }
 
-    public LocalDateTime getFechaRegistro() {
-        return fechaRegistro;
+    public boolean isActivo() {
+        return activo;
     }
 
-    public void setFechaRegistro(LocalDateTime fechaRegistro) {
-        this.fechaRegistro = fechaRegistro;
+    public void setActivo(boolean activo) {
+        this.activo = activo;
     }
 }

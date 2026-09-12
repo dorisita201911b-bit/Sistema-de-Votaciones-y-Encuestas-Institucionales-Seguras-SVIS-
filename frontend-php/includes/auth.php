@@ -15,7 +15,7 @@ function current_user()
 }
 
 /**
- * Verifica si hay una sesion iniciada.
+ * Verifica si hay una sesión activa.
  */
 function is_logged_in()
 {
@@ -27,8 +27,8 @@ function is_logged_in()
  */
 function is_admin()
 {
-    $u = current_user();
-    return $u && ($u['rol'] ?? '') === 'ADMIN';
+    $rol = $_SESSION['rol'] ?? ($_SESSION['user']['rol'] ?? '');
+    return strtoupper($rol) === 'ADMIN';
 }
 
 /**
@@ -37,56 +37,54 @@ function is_admin()
 function require_admin()
 {
     if (!is_admin()) {
-        header('Location: login.php?msg=admin_required');
+        header('Location: ' . (file_exists('login.php') ? 'login.php' : '../login.php') . '?msg=admin_required');
         exit;
     }
 }
 
 /**
- * Exige iniciar sesion. Si no esta autenticado, redirige a login.
+ * Exige iniciar sesión. Si no está autenticado, redirige a login.
  */
 function require_login()
 {
     if (!is_logged_in()) {
-        header('Location: login.php?msg=login_required');
+        header('Location: ' . (file_exists('login.php') ? 'login.php' : '../login.php') . '?msg=login_required');
         exit;
     }
 }
 
 /**
- * Intenta autenticar un usuario por nombre de usuario o documento.
+ * Intenta autenticar un usuario por correo institucional y contraseña.
  */
-function login($identificador, $password)
+function login($correo, $password)
 {
-    return api()->post('/auth/login', [
-        'usuario' => $identificador,
+    $res = api()->post('/auth/login', [
+        'correo' => trim($correo),
         'password' => $password,
     ]);
+
+    if ($res['ok'] && !empty($res['data'])) {
+        $usuario = $res['data'];
+        $_SESSION['user'] = $usuario;
+        $_SESSION['rol'] = $usuario['rol'] ?? 'VOTANTE';
+        $_SESSION['usuario_id'] = $usuario['id'] ?? null;
+    }
+
+    return $res;
 }
 
 /**
- * Cierra la sesion actual.
+ * Cierra la sesión actual.
  */
 function logout()
 {
-    $_SESSION['user'] = null;
-    $_SESSION['access_token'] = null;
-    unset($_SESSION['user']);
-    unset($_SESSION['access_token']);
+    $_SESSION = [];
+    if (ini_get("session.use_cookies")) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000,
+            $params["path"], $params["domain"],
+            $params["secure"], $params["httponly"]
+        );
+    }
     session_destroy();
-}
-
-/**
- * Registra un nuevo usuario con rol USUARIO.
- */
-function registrar_usuario($username, $password, $nombre, $documento, $email, $telefono)
-{
-    return api()->post('/auth/registro', [
-        'username' => $username,
-        'password' => $password,
-        'nombre' => $nombre,
-        'documento' => $documento,
-        'email' => $email,
-        'telefono' => $telefono,
-    ]);
 }

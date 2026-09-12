@@ -3,25 +3,25 @@ package co.edu.sena.cimm.svis.model;
 import java.time.LocalDateTime;
 
 /**
- * Representa el comprobante digital y registro de auditoría anónima.
- * 
- * Cumplimiento de REGLA 4: No contiene usuarioId ni opcionId.
- * Garantiza que el sistema audita la emisión del voto sin vulnerar el secreto.
+ * Representa el voto y comprobante digital en la tabla 'votos'
+ * (id, encuesta_id, opcion_id, fecha_voto, comprobante_hash).
  */
 public class VotoRecibo {
     private Long id;
     private Long encuestaId;
-    private String hashRecibo;
+    private Long opcionId;
     private LocalDateTime fechaVoto;
+    private String comprobanteHash;
 
     public VotoRecibo() {
     }
 
-    public VotoRecibo(Long id, Long encuestaId, String hashRecibo, LocalDateTime fechaVoto) {
+    public VotoRecibo(Long id, Long encuestaId, Long opcionId, LocalDateTime fechaVoto, String comprobanteHash) {
         this.id = id;
         this.encuestaId = encuestaId;
-        this.hashRecibo = hashRecibo;
+        this.opcionId = opcionId;
         this.fechaVoto = fechaVoto;
+        this.comprobanteHash = comprobanteHash;
     }
 
     public Long getId() {
@@ -40,12 +40,12 @@ public class VotoRecibo {
         this.encuestaId = encuestaId;
     }
 
-    public String getHashRecibo() {
-        return hashRecibo;
+    public Long getOpcionId() {
+        return opcionId;
     }
 
-    public void setHashRecibo(String hashRecibo) {
-        this.hashRecibo = hashRecibo;
+    public void setOpcionId(Long opcionId) {
+        this.opcionId = opcionId;
     }
 
     public LocalDateTime getFechaVoto() {
@@ -54,5 +54,21 @@ public class VotoRecibo {
 
     public void setFechaVoto(LocalDateTime fechaVoto) {
         this.fechaVoto = fechaVoto;
+    }
+
+    public String getComprobanteHash() {
+        return comprobanteHash;
+    }
+
+    public void setComprobanteHash(String comprobanteHash) {
+        this.comprobanteHash = comprobanteHash;
+    }
+
+    public String getHashRecibo() {
+        return comprobanteHash;
+    }
+
+    public void setHashRecibo(String hashRecibo) {
+        this.comprobanteHash = hashRecibo;
     }
 }

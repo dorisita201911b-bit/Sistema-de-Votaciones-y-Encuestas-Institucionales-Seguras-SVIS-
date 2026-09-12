@@ -14,11 +14,11 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * Implementación JDBC de {@link VotoRepository} con cumplimiento inexcusable de:
+ * Implementación JDBC de {@link VotoRepository} sobre 'sistemavotaciones' con cumplimiento de:
  * 
  * - REGLA 2: Quema Atómica del OTP mediante transacción ACID (setAutoCommit(false), commit, rollback).
  * - REGLA 3: Aislamiento contra Condiciones de Carrera con bloqueo pesimista de fila (SELECT ... FOR UPDATE).
- * - REGLA 4: Secreto Absoluto del Sufragio (incremento numérico +1 sin vincular identidad ni token).
+ * - REGLA 4: Secreto del Sufragio (incremento numérico +1 en opciones.cantidad_votos).
  */
 public class JdbcVotoRepository implements VotoRepository {
 
@@ -37,7 +37,7 @@ public class JdbcVotoRepository implements VotoRepository {
                 // 1. REGLA 3 (Aislamiento contra Condiciones de Carrera):
                 // Bloqueo pesimista de fila con SELECT ... FOR UPDATE en MySQL InnoDB
                 String sqlLockToken = "SELECT id, encuesta_id, estado, fecha_expiracion "
-                        + "FROM token_otp WHERE token = ? FOR UPDATE";
+                        + "FROM tokens WHERE token = ? FOR UPDATE";
 
                 long tokenId;
                 long encuestaId;
@@ -71,7 +71,7 @@ public class JdbcVotoRepository implements VotoRepository {
                 }
 
                 // Validar que la encuesta exista y se encuentre en estado ACTIVA
-                String sqlVerificarEncuesta = "SELECT estado FROM encuesta WHERE id = ?";
+                String sqlVerificarEncuesta = "SELECT estado FROM encuestas WHERE id = ?";
                 try (PreparedStatement psEnc = c.prepareStatement(sqlVerificarEncuesta)) {
                     psEnc.setLong(1, encuestaId);
                     try (ResultSet rsEnc = psEnc.executeQuery()) {
@@ -88,7 +88,7 @@ public class JdbcVotoRepository implements VotoRepository {
                 }
 
                 // Validar que la opción pertenezca legítimamente a esta encuesta
-                String sqlVerificarOpcion = "SELECT id FROM opcion WHERE id = ? AND encuesta_id = ?";
+                String sqlVerificarOpcion = "SELECT id FROM opciones WHERE id = ? AND encuesta_id = ?";
                 try (PreparedStatement psOpc = c.prepareStatement(sqlVerificarOpcion)) {
                     psOpc.setLong(1, opcionId);
                     psOpc.setLong(2, encuestaId);
@@ -101,7 +101,7 @@ public class JdbcVotoRepository implements VotoRepository {
                 }
 
                 // 2. REGLA 2: Quema Inmediata del Token OTP en la misma transacción
-                String sqlQuemarToken = "UPDATE token_otp SET estado = 'USADO', fecha_uso = NOW() WHERE id = ?";
+                String sqlQuemarToken = "UPDATE tokens SET estado = 'USADO', fecha_uso = NOW() WHERE id = ?";
                 try (PreparedStatement psQuemar = c.prepareStatement(sqlQuemarToken)) {
                     psQuemar.setLong(1, tokenId);
                     int filasAfectadas = psQuemar.executeUpdate();
@@ -111,10 +111,9 @@ public class JdbcVotoRepository implements VotoRepository {
                     }
                 }
 
-                // 3. REGLA 4: Secreto Absoluto del Sufragio
+                // 3. REGLA 4: Secreto del Sufragio
                 // El contador de la opción solo se incrementa numéricamente (+1).
-                // En ninguna parte de la tabla se almacena el usuario_id ni el token_id.
-                String sqlSumarVoto = "UPDATE opcion SET votos_conteo = votos_conteo + 1 WHERE id = ? AND encuesta_id = ?";
+                String sqlSumarVoto = "UPDATE opciones SET cantidad_votos = cantidad_votos + 1 WHERE id = ? AND encuesta_id = ?";
                 try (PreparedStatement psSumar = c.prepareStatement(sqlSumarVoto)) {
                     psSumar.setLong(1, opcionId);
                     psSumar.setLong(2, encuestaId);
@@ -130,12 +129,13 @@ public class JdbcVotoRepository implements VotoRepository {
                 String hashRecibo = HashUtil.sha256(semillaRecibo);
                 LocalDateTime fechaHoraVoto = LocalDateTime.now();
 
-                // Registro de auditoría anónima (NO guarda id del votante ni del candidato)
-                String sqlRecibo = "INSERT INTO voto_recibo (encuesta_id, hash_recibo, fecha_voto) VALUES (?, ?, ?)";
+                // Registro en tabla 'votos' de sistemavotaciones (encuesta_id, opcion_id, fecha_voto, comprobante_hash)
+                String sqlRecibo = "INSERT INTO votos (encuesta_id, opcion_id, fecha_voto, comprobante_hash) VALUES (?, ?, ?, ?)";
                 try (PreparedStatement psRecibo = c.prepareStatement(sqlRecibo)) {
                     psRecibo.setLong(1, encuestaId);
-                    psRecibo.setString(2, hashRecibo);
+                    psRecibo.setLong(2, opcionId);
                     psRecibo.setTimestamp(3, Timestamp.valueOf(fechaHoraVoto));
+                    psRecibo.setString(4, hashRecibo);
                     psRecibo.executeUpdate();
                 }
 

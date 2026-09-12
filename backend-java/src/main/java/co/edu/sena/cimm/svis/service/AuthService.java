@@ -15,15 +15,19 @@ public class AuthService {
     }
 
     public LoginResponse autenticar(LoginRequest req) {
-        if (req == null || req.getDocumento() == null || req.getDocumento().trim().isEmpty()) {
-            throw new NegocioException("Debe ingresar su documento de identidad.");
+        if (req == null || req.getIdentificador() == null || req.getIdentificador().trim().isEmpty()) {
+            throw new NegocioException("Debe ingresar su correo institucional o usuario.");
         }
         if (req.getPassword() == null || req.getPassword().trim().isEmpty()) {
             throw new NegocioException("Debe ingresar su contraseña.");
         }
 
-        Usuario usuario = usuarioRepository.buscarPorDocumento(req.getDocumento().trim())
+        Usuario usuario = usuarioRepository.buscarPorDocumento(req.getIdentificador().trim())
                 .orElseThrow(() -> new NegocioException("Credenciales no válidas en la plataforma institucional."));
+
+        if (!usuario.isActivo()) {
+            throw new NegocioException("El usuario se encuentra inactivo.");
+        }
 
         if (!usuario.getPassword().equals(req.getPassword())) {
             throw new NegocioException("Contraseña incorrecta. Por favor intente de nuevo.");
@@ -31,9 +35,8 @@ public class AuthService {
 
         return new LoginResponse(
                 usuario.getId(),
-                usuario.getDocumento(),
-                usuario.getNombreCompleto(),
-                usuario.getEmail(),
+                usuario.getNombre(),
+                usuario.getCorreo(),
                 usuario.getRol()
         );
     }
